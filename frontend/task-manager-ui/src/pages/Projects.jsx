@@ -1,20 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { mockProjects, mockUser } from "../mocks";
-import { Plus, Users, ArrowRight, Folder, X } from "lucide-react";
+import { getProjects, createProject } from "../api/projects";
+import { Plus, Users, ArrowRight, Folder, X, Loader2, AlertTriangle } from "lucide-react";
+import useAuthStore from "../store/authStore";
 
 export default function Projects() {
-  const [projects, setProjects] = useState(mockProjects);
+  const user = useAuthStore((state) => state.user);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
+  const [creating, setCreating] = useState(false);
 
-  const handleCreate = (e) => {
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const data = await getProjects();
+      setProjects(data);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to fetch projects.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!form.name) return;
-    setProjects([{ _id: `p${Date.now()}`, name: form.name, description: form.description, admin: mockUser, members: [mockUser] }, ...projects]);
-    setForm({ name: "", description: "" });
-    setShowModal(false);
+    
+    setCreating(true);
+    try {
+      const newProject = await createProject(form);
+      setProjects([newProject, ...projects]);
+      setForm({ name: "", description: "" });
+      setShowModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create project. Please try again.");
+    } finally {
+      setCreating(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-indigo-600" size={40} />
+        <p className="text-gray-500 font-medium">Loading projects...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -29,9 +70,16 @@ export default function Projects() {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-3">
+          <AlertTriangle size={20} />
+          <p className="text-sm font-medium">{error}</p>
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {projects.map((p) => {
-          const isAdmin = p.admin._id === mockUser._id;
+          const isAdmin = (p.admin._id || p.admin) === user?._id;
           return (
             <Link to={`/projects/${p._id}`} key={p._id}
               className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4 hover:shadow-lg hover:shadow-indigo-50 hover:-translate-y-1 transition-all group">
@@ -49,7 +97,19 @@ export default function Projects() {
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <Users size={13} /> {p.members.length} member{p.members.length !== 1 ? "s" : ""}
+                  <span className="flex -space-x-2 mr-1">
+                    {p.members?.slice(0, 3).map((m, i) => (
+                      <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 text-[10px] flex items-center justify-center font-bold text-indigo-600">
+                        {(m.name || "U").charAt(0)}
+                      </div>
+                    ))}
+                    {(p.members?.length || 0) > 3 && (
+                      <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 text-[10px] flex items-center justify-center font-bold text-gray-500">
+                        +{(p.members?.length || 0) - 3}
+                      </div>
+                    )}
+                  </span>
+                  <Users size={13} /> {p.members?.length || 0} member{(p.members?.length || 0) !== 1 ? "s" : ""}
                 </div>
                 <ArrowRight size={14} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
               </div>
@@ -77,21 +137,24 @@ export default function Projects() {
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Project Name *</label>
-                <input type="text" placeholder="E.g. Website Redesign" value={form.name}
+                <input type="text" placeholder="E.g. Website Redesign" value={form.name} disabled={creating}
                   onChange={(e) => setForm({ ...form, name: e.target.value })} required
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition" />
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition disabled:opacity-50" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Description</label>
-                <textarea rows={3} placeholder="Brief description..." value={form.description}
+                <textarea rows={3} placeholder="Brief description..." value={form.description} disabled={creating}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition resize-none" />
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition resize-none disabled:opacity-50" />
               </div>
               <div className="flex gap-3 justify-end mt-1">
-                <button type="button" onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 transition cursor-pointer">Cancel</button>
-                <button type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-semibold text-white transition cursor-pointer">Create Project</button>
+                <button type="button" onClick={() => setShowModal(false)} disabled={creating}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 transition cursor-pointer disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={creating}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-semibold text-white transition cursor-pointer disabled:opacity-70 flex items-center gap-2">
+                  {creating && <Loader2 size={16} className="animate-spin" />}
+                  {creating ? "Creating..." : "Create Project"}
+                </button>
               </div>
             </form>
           </div>
