@@ -258,7 +258,9 @@ export default function ProjectDetail() {
                     <Label>Assign To *</Label>
                     <Select value={taskForm.assignedTo} onValueChange={(val) => setTaskForm({ ...taskForm, assignedTo: val })}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
+                        <SelectValue>
+                          {project.members.find(m => m._id === taskForm.assignedTo)?.name || "Select team member"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {project.members.map((m) => (

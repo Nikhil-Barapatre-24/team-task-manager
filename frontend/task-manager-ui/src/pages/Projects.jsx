@@ -172,10 +172,12 @@ export default function Projects() {
         {/* Create New Card */}
         <Dialog open={showModal} onOpenChange={setShowModal}>
           <DialogTrigger asChild>
-            <button className="border-2 border-dashed border-gray-200 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 min-h-48 text-gray-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors cursor-pointer group bg-gray-50/50">
-              <Plus size={32} className="group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold tracking-tight">Create New Project</span>
-            </button>
+            <Card className="border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-indigo-400 group transition-all cursor-pointer flex flex-col items-center justify-center min-h-[200px]">
+              <CardContent className="flex flex-col items-center gap-3 p-6 text-gray-400 group-hover:text-indigo-500 transition-colors">
+                <Plus size={32} className="group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-semibold tracking-tight">Create New Project</span>
+              </CardContent>
+            </Card>
           </DialogTrigger>
         </Dialog>
       </div>

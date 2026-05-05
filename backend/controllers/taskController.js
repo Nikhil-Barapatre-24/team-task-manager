@@ -24,6 +24,7 @@ const createTask = asyncHandler(async (req, res) => {
   }
 
   const task = await Task.create({ title, description, dueDate, priority, project, assignedTo });
+  await task.populate("assignedTo", "name email");
   res.status(201).json({ success: true, task });
 });
 
