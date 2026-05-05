@@ -1,97 +1,98 @@
 const Project = require("../models/Project");
+const asyncHandler = require("../utils/asyncHandler");
 
-// @desc    Create a project
+// @desc    Create project
 // @route   POST /api/projects
-// @access  Private
-const createProject = async (req, res) => {
-  try {
-    const { name, description } = req.body;
+const createProject = asyncHandler(async (req, res) => {
+  const { name, description } = req.body;
 
-    const project = new Project({
-      name,
-      description,
-      admin: req.user._id,
-      members: [req.user._id]
-    });
-
-    const createdProject = await project.save();
-    res.status(201).json(createdProject);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!name) {
+    res.status(400);
+    throw new Error("Project name is required");
   }
-};
 
-// @desc    Get user's projects
+  const project = await Project.create({
+    name,
+    description,
+    admin: req.user._id,
+    members: [req.user._id],
+  });
+
+  res.status(201).json({ success: true, project });
+});
+
+// @desc    Get user projects
 // @route   GET /api/projects
-// @access  Private
-const getProjects = async (req, res) => {
-  try {
-    const projects = await Project.find({
-      $or: [{ admin: req.user._id }, { members: req.user._id }],
-    }).populate("members", "name email");
-    res.json(projects);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+const getProjects = asyncHandler(async (req, res) => {
+  const projects = await Project.find({
+    $or: [{ admin: req.user._id }, { members: req.user._id }],
+  }).populate("members", "name email").lean();
+
+  res.json({ success: true, projects });
+});
 
 // @desc    Get project by ID
 // @route   GET /api/projects/:id
-// @access  Private
-const getProjectById = async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id).populate(
-      "members",
-      "name email"
-    ).populate("admin", "name email");
-    
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+const getProjectById = asyncHandler(async (req, res) => {
+  const project = await Project.findById(req.params.id)
+    .populate("members", "name email")
+    .populate("admin", "name email")
+    .lean();
 
-    // Check if user is part of the project
-    const isMember = project.members.some(member => member._id.toString() === req.user._id.toString());
-    const isAdmin = project.admin._id.toString() === req.user._id.toString();
-
-    if (!isMember && !isAdmin) {
-      return res.status(403).json({ message: "Not authorized to view this project" });
-    }
-
-    res.json(project);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!project) {
+    res.status(404);
+    throw new Error("Project not found");
   }
-};
 
-// @desc    Add member to project
+  const isMember = project.members.some((m) => m._id.toString() === req.user._id.toString());
+  const isAdmin = project.admin._id.toString() === req.user._id.toString();
+
+  if (!isMember && !isAdmin) {
+    res.status(403);
+    throw new Error("Not authorized to view this project");
+  }
+
+  res.json({ success: true, project });
+});
+
+// @desc    Add project member
 // @route   PUT /api/projects/:id/members
-// @access  Private/Admin
-const addMemberToProject = async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const project = await Project.findById(req.params.id);
+const addMemberToProject = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const User = require("../models/User");
 
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    // Admin check
-    if (project.admin.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized, admin only" });
-    }
-
-    if (project.members.includes(userId)) {
-      return res.status(400).json({ message: "User already in project" });
-    }
-
-    project.members.push(userId);
-    await project.save();
-
-    res.json(project);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!email) {
+    res.status(400);
+    throw new Error("User email is required");
   }
-};
+
+  const project = await Project.findById(req.params.id);
+  if (!project) {
+    res.status(404);
+    throw new Error("Project not found");
+  }
+
+  if (project.admin.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Not authorized, admin only");
+  }
+
+  const userToAdd = await User.findOne({ email }).lean();
+  if (!userToAdd) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  if (project.members.includes(userToAdd._id)) {
+    res.status(400);
+    throw new Error("User already in project");
+  }
+
+  project.members.push(userToAdd._id);
+  await project.save();
+
+  res.json({ success: true, message: "Member added successfully", project });
+});
 
 module.exports = {
   createProject,
