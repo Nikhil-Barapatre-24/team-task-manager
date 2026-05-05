@@ -1,123 +1,105 @@
 const Task = require("../models/Task");
 const Project = require("../models/Project");
+const asyncHandler = require("../utils/asyncHandler");
 
-// @desc    Create a task
+// @desc    Create task
 // @route   POST /api/tasks
-// @access  Private/Admin
-const createTask = async (req, res) => {
-  try {
-    const { title, description, dueDate, priority, project, assignedTo } = req.body;
+const createTask = asyncHandler(async (req, res) => {
+  const { title, description, dueDate, priority, project, assignedTo } = req.body;
 
-    const projectDoc = await Project.findById(project);
-    if (!projectDoc) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    if (projectDoc.admin.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized, admin only can create tasks" });
-    }
-
-    const task = new Task({
-      title,
-      description,
-      dueDate,
-      priority,
-      project,
-      assignedTo,
-    });
-
-    const createdTask = await task.save();
-    res.status(201).json(createdTask);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!title || !project || !assignedTo) {
+    res.status(400);
+    throw new Error("Please fill in required fields (title, project, assignedTo)");
   }
-};
 
-// @desc    Get tasks for a project
+  const projectDoc = await Project.findById(project).lean();
+  if (!projectDoc) {
+    res.status(404);
+    throw new Error("Project not found");
+  }
+
+  if (projectDoc.admin.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Not authorized, admin only can create tasks");
+  }
+
+  const task = await Task.create({ title, description, dueDate, priority, project, assignedTo });
+  res.status(201).json({ success: true, task });
+});
+
+// @desc    Get project tasks
 // @route   GET /api/tasks/project/:projectId
-// @access  Private
-const getTasksByProject = async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.projectId);
-    if (!project) return res.status(404).json({ message: "Project not found" });
-
-    const isMember = project.members.includes(req.user._id) || project.admin.toString() === req.user._id.toString();
-    if (!isMember) {
-      return res.status(403).json({ message: "Not authorized to view tasks for this project" });
-    }
-
-    const tasks = await Task.find({ project: req.params.projectId }).populate("assignedTo", "name email");
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+const getTasksByProject = asyncHandler(async (req, res) => {
+  const project = await Project.findById(req.params.projectId).lean();
+  if (!project) {
+    res.status(404);
+    throw new Error("Project not found");
   }
-};
+
+  const isMember = project.members.map(m => m.toString()).includes(req.user._id.toString()) || 
+                   project.admin.toString() === req.user._id.toString();
+  
+  if (!isMember) {
+    res.status(403);
+    throw new Error("Not authorized to view tasks");
+  }
+
+  const tasks = await Task.find({ project: req.params.projectId })
+    .populate("assignedTo", "name email")
+    .lean();
+    
+  res.json({ success: true, tasks });
+});
 
 // @desc    Update task status
 // @route   PUT /api/tasks/:id/status
-// @access  Private (Assigned member or Admin)
-const updateTaskStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const task = await Task.findById(req.params.id);
+const updateTaskStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const task = await Task.findById(req.params.id);
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    const project = await Project.findById(task.project);
-    const isAdmin = project.admin.toString() === req.user._id.toString();
-    const isAssigned = task.assignedTo && task.assignedTo.toString() === req.user._id.toString();
-
-    if (!isAdmin && !isAssigned) {
-      return res.status(403).json({ message: "Not authorized to update this task" });
-    }
-
-    task.status = status;
-    await task.save();
-
-    res.json(task);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!task) {
+    res.status(404);
+    throw new Error("Task not found");
   }
-};
 
-// @desc    Get Dashboard Stats
+  const project = await Project.findById(task.project).lean();
+  const isAdmin = project.admin.toString() === req.user._id.toString();
+  const isAssigned = task.assignedTo && task.assignedTo.toString() === req.user._id.toString();
+
+  if (!isAdmin && !isAssigned) {
+    res.status(403);
+    throw new Error("Not authorized to update this task");
+  }
+
+  task.status = status;
+  await task.save();
+
+  res.json({ success: true, task });
+});
+
+// @desc    Get dashboard stats
 // @route   GET /api/tasks/dashboard
-// @access  Private
-const getDashboardStats = async (req, res) => {
-  try {
-    // Find projects where user is member or admin
-    const projects = await Project.find({
-      $or: [{ admin: req.user._id }, { members: req.user._id }],
-    });
+const getDashboardStats = asyncHandler(async (req, res) => {
+  const projects = await Project.find({
+    $or: [{ admin: req.user._id }, { members: req.user._id }],
+  }).select("_id").lean();
 
-    const projectIds = projects.map((p) => p._id);
-    
-    // Get stats for these projects
-    const tasks = await Task.find({ project: { $in: projectIds } });
+  const projectIds = projects.map((p) => p._id);
+  const tasks = await Task.find({ project: { $in: projectIds } }).lean();
 
-    const totalTasks = tasks.length;
-    const tasksByStatus = {
+  const stats = {
+    totalTasks: tasks.length,
+    tasksByStatus: {
       "To Do": tasks.filter((t) => t.status === "To Do").length,
       "In Progress": tasks.filter((t) => t.status === "In Progress").length,
       "Done": tasks.filter((t) => t.status === "Done").length,
-    };
+    },
+    myTasks: tasks.filter((t) => t.assignedTo?.toString() === req.user._id.toString()).length,
+    overdueTasks: tasks.filter((t) => t.status !== "Done" && t.dueDate && new Date(t.dueDate) < new Date()).length,
+  };
 
-    const myTasks = tasks.filter((t) => t.assignedTo && t.assignedTo.toString() === req.user._id.toString()).length;
-    
-    const overdueTasks = tasks.filter((t) => t.status !== "Done" && new Date(t.dueDate) < new Date()).length;
-
-    res.json({
-      totalTasks,
-      tasksByStatus,
-      myTasks,
-      overdueTasks,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  res.json({ success: true, stats });
+});
 
 module.exports = {
   createTask,
