@@ -22,12 +22,12 @@ const PRIORITY_STYLES = {
 export default function ProjectDetail() {
   const { id } = useParams();
   const user = useAuthStore((state) => state.user);
-  
+
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "" });
@@ -142,19 +142,17 @@ export default function ProjectDetail() {
       </div>
 
       {/* Members Row */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center gap-2 mb-6">
         <div className="flex">
-          {project.members?.map((m, i) => (
-            <div key={m._id || m} title={m.name}
-              className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white text-white text-xs font-bold flex items-center justify-center shrink-0"
-              style={{ marginLeft: i === 0 ? 0 : "-6px", zIndex: (project.members?.length || 0) - i }}>
-              {(m.name || "U").charAt(0)}
+          {project.members.map((m, i) => (
+            <div key={m._id} title={m.name}
+              className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white text-white text-xs font-bold flex items-center justify-center"
+              style={{ marginLeft: i === 0 ? 0 : "-6px", zIndex: project.members.length - i }}>
+              {m.name.charAt(0)}
             </div>
           ))}
         </div>
-        <span className="text-xs text-gray-400 whitespace-nowrap">
-          {project.members?.map((m) => m.name || "User").join(", ")}
-        </span>
+        <span className="text-xs text-gray-400">{project.members.map((m) => m.name).join(", ")}</span>
       </div>
 
       {/* Kanban Board */}
@@ -189,24 +187,21 @@ export default function ProjectDetail() {
                     )}
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">
-                          {(task.assignedTo?.name || "?").charAt(0)}
+                        <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-xs font-bold flex items-center justify-center">
+                          {task.assignedTo?.name?.charAt(0) ?? "?"}
                         </div>
-                        <span className="text-[11px] text-gray-400 font-medium truncate max-w-[80px]">
-                          {task.assignedTo?.name || "Unassigned"}
-                        </span>
+                        <span className="text-xs text-gray-400">{task.assignedTo?.name ?? "Unassigned"}</span>
                       </div>
-                      <span className="text-[10px] text-gray-300 font-bold flex items-center gap-1">
-                        <Calendar size={10} />
+                      <span className="text-xs text-gray-300">
                         {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     </div>
                     {/* Move buttons */}
-                    <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-gray-50 flex-wrap">
+                    <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-gray-100 flex-wrap">
                       {STATUS_COLS.filter((s) => s !== status).map((s) => (
                         <button key={s} onClick={() => moveTask(task._id, s)}
-                          className="text-[10px] px-2 py-1 bg-gray-50 hover:bg-indigo-600 hover:text-white text-gray-400 rounded-lg transition cursor-pointer font-bold uppercase tracking-wider border border-gray-100">
-                          {s}
+                          className="text-xs px-2.5 py-1 bg-gray-50 hover:bg-indigo-600 hover:text-white text-gray-500 rounded-lg transition cursor-pointer font-medium">
+                          → {s}
                         </button>
                       ))}
                     </div>
@@ -221,54 +216,47 @@ export default function ProjectDetail() {
       {/* Create Task Modal */}
       {showTaskModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowTaskModal(false)}>
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><Plus size={18}/> New Task</h2>
-              <button onClick={() => setShowTaskModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18}/></button>
+              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><Plus size={18} /> New Task</h2>
+              <button onClick={() => setShowTaskModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <form onSubmit={handleCreateTask} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Title *</label>
-                <input type="text" placeholder="Task title..." value={taskForm.title} disabled={creatingTask}
+                <input type="text" placeholder="Task title..." value={taskForm.title}
                   onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className={inputCls} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Description</label>
-                <textarea rows={3} placeholder="Optional details..." value={taskForm.description} disabled={creatingTask}
+                <textarea rows={3} placeholder="Optional details..." value={taskForm.description}
                   onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} className={inputCls + " resize-none"} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Priority</label>
-                  <select value={taskForm.priority} disabled={creatingTask}
-                    onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })} className={inputCls}>
+                  <select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })} className={inputCls}>
                     <option>High</option><option>Medium</option><option>Low</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Due Date *</label>
-                  <input type="date" value={taskForm.dueDate} disabled={creatingTask}
+                  <input type="date" value={taskForm.dueDate}
                     onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} required className={inputCls} />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Assign To *</label>
-                <select value={taskForm.assignedTo} disabled={creatingTask}
-                  onChange={(e) => setTaskForm({ ...taskForm, assignedTo: e.target.value })} required className={inputCls}>
+                <label className="text-sm font-medium text-gray-700">Assign To</label>
+                <select value={taskForm.assignedTo} onChange={(e) => setTaskForm({ ...taskForm, assignedTo: e.target.value })} className={inputCls}>
                   <option value="">Select member</option>
-                  {project.members?.map((m) => (
-                    <option key={m._id || m} value={m._id || m}>{m.name || "Member"}</option>
-                  ))}
+                  {project.members.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
                 </select>
               </div>
               <div className="flex gap-3 justify-end mt-1">
-                <button type="button" onClick={() => setShowTaskModal(false)} disabled={creatingTask}
-                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 rounded-xl transition cursor-pointer disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={creatingTask}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition cursor-pointer disabled:opacity-70 flex items-center gap-2">
-                  {creatingTask && <Loader2 size={16} className="animate-spin" />}
-                  {creatingTask ? "Creating..." : "Create Task"}
-                </button>
+                <button type="button" onClick={() => setShowTaskModal(false)}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-700 rounded-xl transition cursor-pointer">Cancel</button>
+                <button type="submit"
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition cursor-pointer">Create Task</button>
               </div>
             </form>
           </div>
@@ -278,10 +266,10 @@ export default function ProjectDetail() {
       {/* Add Member Modal */}
       {showMemberModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowMemberModal(false)}>
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><UserPlus size={18}/> Add Member</h2>
-              <button onClick={() => setShowMemberModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18}/></button>
+              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><UserPlus size={18} /> Add Member</h2>
+              <button onClick={() => setShowMemberModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
