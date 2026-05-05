@@ -4,14 +4,14 @@ import { Link } from "react-router-dom";
 import { getDashboardStats } from "../api/tasks";
 import { getProjects } from "../api/projects";
 import useAuthStore from "../store/authStore";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const STATUS_PILL = {
   "To Do": "bg-indigo-50 text-indigo-600",
   "In Progress": "bg-orange-50 text-orange-600",
   "Done": "bg-emerald-50 text-emerald-700",
 };
-
-const PRIORITY_DOT = { High: "bg-red-500", Medium: "bg-amber-400", Low: "bg-emerald-500" };
 
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
@@ -29,7 +29,7 @@ export default function Dashboard() {
           getProjects(),
         ]);
         setStats(statsData);
-        setProjects(projectsData.slice(0, 3)); // Only show top 3 on dashboard
+        setProjects(Array.isArray(projectsData) ? projectsData.slice(0, 3) : []);
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Failed to load dashboard data.");
         console.error(err);
@@ -52,25 +52,24 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-600 p-6 rounded-2xl flex flex-col items-center gap-4">
-          <AlertTriangle size={32} />
-          <p className="font-semibold text-lg">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-red-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-red-700 transition"
-          >
-            Retry
-          </button>
-        </div>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col items-center gap-4 pt-6">
+            <AlertTriangle className="text-red-600" size={32} />
+            <p className="font-semibold text-lg text-red-600">{error}</p>
+            <Button variant="destructive" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   const statCards = [
-    { label: "Total Tasks", value: stats?.totalTasks || 0, icon: ListTodo, bg: "bg-indigo-500", card: "bg-indigo-50" },
-    { label: "In Progress", value: stats?.tasksByStatus?.["In Progress"] || 0, icon: Clock, bg: "bg-orange-500", card: "bg-orange-50" },
-    { label: "Completed", value: stats?.tasksByStatus?.["Done"] || 0, icon: CheckCircle, bg: "bg-emerald-500", card: "bg-emerald-50" },
-    { label: "Overdue", value: stats?.overdueTasks || 0, icon: AlertTriangle, bg: "bg-red-500", card: "bg-red-50" },
+    { label: "Total Tasks", value: stats?.totalTasks || 0, icon: ListTodo, bg: "bg-indigo-500", card: "bg-indigo-50 border-indigo-100" },
+    { label: "In Progress", value: stats?.tasksByStatus?.["In Progress"] || 0, icon: Clock, bg: "bg-orange-500", card: "bg-orange-50 border-orange-100" },
+    { label: "Completed", value: stats?.tasksByStatus?.["Done"] || 0, icon: CheckCircle, bg: "bg-emerald-500", card: "bg-emerald-50 border-emerald-100" },
+    { label: "Overdue", value: stats?.overdueTasks || 0, icon: AlertTriangle, bg: "bg-red-500", card: "bg-red-50 border-red-100" },
   ];
 
   return (
@@ -86,25 +85,29 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statCards.map(({ label, value, icon: Icon, bg, card }) => (
-          <div key={label} className={`${card} rounded-2xl p-5 flex items-center gap-4`}>
-            <div className={`${bg} w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0`}>
-              <Icon size={20} />
-            </div>
-            <div>
-              <div className="text-3xl font-extrabold text-gray-900 leading-none">{value}</div>
-              <div className="text-xs text-gray-500 font-medium mt-1">{label}</div>
-            </div>
-          </div>
+          <Card key={label} className={`${card} border shadow-none`}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`${bg} w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0`}>
+                <Icon size={20} />
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold text-gray-900 leading-none">{value}</div>
+                <div className="text-xs text-gray-500 font-medium mt-1">{label}</div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Main Grid */}
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
         {/* Status Breakdown */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-bold text-gray-900 mb-5">Task Distribution</h2>
-          <div className="flex flex-col gap-4">
-            {stats && Object.entries(stats.tasksByStatus).map(([label, count]) => {
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Task Distribution</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {stats && Object.entries(stats.tasksByStatus || {}).map(([label, count]) => {
               const pct = stats.totalTasks ? Math.round((count / stats.totalTasks) * 100) : 0;
               const colors = { "To Do": "bg-indigo-500", "In Progress": "bg-orange-400", "Done": "bg-emerald-500" };
               return (
@@ -117,18 +120,18 @@ export default function Dashboard() {
                 </div>
               );
             })}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* My Projects */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="font-bold text-gray-900">Projects Overview</h2>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-5">
+            <CardTitle className="text-lg">Projects Overview</CardTitle>
             <Link to="/projects" className="flex items-center gap-1 text-xs text-indigo-600 font-medium hover:underline">
               See all <ArrowRight size={12} />
             </Link>
-          </div>
-          <div className="flex flex-col gap-3">
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
             {projects.length > 0 ? (
               projects.map((p) => (
                 <Link key={p._id} to={`/projects/${p._id}`}
@@ -149,8 +152,8 @@ export default function Dashboard() {
                 <Link to="/projects" className="text-indigo-600 text-xs font-semibold mt-2 inline-block">Create your first project</Link>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

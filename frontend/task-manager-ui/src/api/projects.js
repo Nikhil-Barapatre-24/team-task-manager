@@ -14,3 +14,8 @@ export const createProject = async (projectData) => {
   const { data } = await API.post("/projects", projectData);
   return data.project || data;
 };
+
+export const addMemberToProject = async (projectId, email) => {
+  const { data } = await API.put(`/projects/${projectId}/members`, { email });
+  return data;
+};
