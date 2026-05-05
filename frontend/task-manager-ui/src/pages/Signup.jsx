@@ -2,29 +2,31 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckSquare, Eye, EyeOff, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { signup } from "../api/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function Signup() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) {
-      setError("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
     setLoading(true);
-    setError("");
-
     try {
       await signup(form);
       setSuccess(true);
+      toast.success("Account created successfully!");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create account. Please try again.");
+      toast.error(err.response?.data?.message || "Failed to create account. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -33,7 +35,7 @@ export default function Signup() {
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-100 p-10 w-full max-w-md text-center">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-100 p-10 w-full max-w-md text-center border">
           <div className="flex justify-center mb-6">
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500">
               <CheckCircle2 size={48} />
@@ -43,12 +45,11 @@ export default function Signup() {
           <p className="text-gray-500 text-sm mb-8">
             Your account has been successfully created. Please sign in to continue.
           </p>
-          <Link
-            to="/login"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
-          >
-            Sign in now <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <Button asChild className="w-full h-12 text-base">
+            <Link to="/login">
+              Sign in now <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
         </div>
       </div>
     );
@@ -56,52 +57,49 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-100 p-10 w-full max-w-md">
+      <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-100 p-10 w-full max-w-md border">
         <div className="flex items-center gap-2 text-indigo-600 font-extrabold text-2xl mb-8 tracking-tight">
           <CheckSquare size={26} /> TaskFlow
         </div>
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Create your account</h1>
         <p className="text-gray-500 text-sm mt-1 mb-7">Start managing your team&apos;s tasks today</p>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Full Name</label>
-            <input
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
               type="text"
               placeholder="John Doe"
               value={form.name}
               disabled={loading}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="px-4 py-3 rounded-xl border-1.5 border-gray-200 bg-gray-50 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition disabled:opacity-50"
+              className="h-12"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Email</label>
-            <input
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
               type="email"
               placeholder="you@example.com"
               value={form.email}
               disabled={loading}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="px-4 py-3 rounded-xl border-1.5 border-gray-200 bg-gray-50 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition disabled:opacity-50"
+              className="h-12"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Password</label>
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <input
+              <Input
+                id="password"
                 type={showPass ? "text" : "password"}
                 placeholder="Min. 6 characters"
                 value={form.password}
                 disabled={loading}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full px-4 py-3 pr-10 rounded-xl border-1.5 border-gray-200 bg-gray-50 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition disabled:opacity-50"
+                className="h-12 pr-10"
               />
               <button
                 type="button"
@@ -113,19 +111,15 @@ export default function Signup() {
               </button>
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all hover:-translate-y-0.5 mt-1 active:translate-y-0 cursor-pointer disabled:opacity-70 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-          >
+          <Button type="submit" disabled={loading} className="w-full h-12 text-base mt-2">
             {loading ? (
               <>
-                <Loader2 size={18} className="animate-spin" /> Creating Account...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Account...
               </>
             ) : (
               "Create Account"
             )}
-          </button>
+          </Button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
