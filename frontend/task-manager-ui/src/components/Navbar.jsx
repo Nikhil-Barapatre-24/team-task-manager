@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Folder, LogOut, CheckSquare } from "lucide-react";
+import useAuthStore from "../store/authStore";
 
-export default function Navbar({ user }) {
+export default function Navbar() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    logout();
     navigate("/login");
   };
 
