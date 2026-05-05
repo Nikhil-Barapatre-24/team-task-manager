@@ -7,6 +7,8 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import useAuthStore from "./store/authStore";
 
+import { Toaster } from "@/components/ui/sonner";
+
 function ProtectedRoute({ user, children }) {
   if (!user) return <Navigate to="/login" replace />;
   return (
@@ -22,6 +24,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors />
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <Signup />} />
