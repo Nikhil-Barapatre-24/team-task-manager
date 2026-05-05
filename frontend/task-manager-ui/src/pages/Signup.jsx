@@ -45,10 +45,8 @@ export default function Signup() {
           <p className="text-gray-500 text-sm mb-8">
             Your account has been successfully created. Please sign in to continue.
           </p>
-          <Button asChild className="w-full h-12 text-base">
-            <Link to="/login">
-              Sign in now <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+          <Button render={<Link to="/login" />} className="w-full h-12 text-base">
+            Sign in now <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>
       </div>

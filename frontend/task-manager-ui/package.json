@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "echo 'Verifying frontend build...' && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite preview"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

@@ -7,7 +7,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const createTask = asyncHandler(async (req, res) => {
   const { title, description, dueDate, priority, project, assignedTo } = req.body;
 
-  if (!title || !project || !assignedTo) {
+  if (!title || !project || !assignedTo || assignedTo.length === 0) {
     res.status(400);
     throw new Error("Please fill in required fields (title, project, assignedTo)");
   }
@@ -65,7 +65,7 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
 
   const project = await Project.findById(task.project).lean();
   const isAdmin = project.admin.toString() === req.user._id.toString();
-  const isAssigned = task.assignedTo && task.assignedTo.toString() === req.user._id.toString();
+  const isAssigned = task.assignedTo && task.assignedTo.some(id => id.toString() === req.user._id.toString());
 
   if (!isAdmin && !isAssigned) {
     res.status(403);
@@ -127,7 +127,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       "In Progress": tasks.filter((t) => t.status === "In Progress").length,
       "Done": tasks.filter((t) => t.status === "Done").length,
     },
-    myTasks: tasks.filter((t) => t.assignedTo?.toString() === req.user._id.toString()).length,
+    myTasks: tasks.filter((t) => t.assignedTo && t.assignedTo.some(id => id.toString() === req.user._id.toString())).length,
     overdueTasks: tasks.filter((t) => t.status !== "Done" && t.dueDate && new Date(t.dueDate) < new Date()).length,
   };
 

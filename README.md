@@ -1,11 +1,8 @@
-<<<<<<< Updated upstream
-# team-task-manager
-=======
 # Team Task Manager
 
 A modern, collaborative task management application built with React, Node.js, and MongoDB. Features real-time collaboration, multi-assignee tasks, and professional project management capabilities.
 
-## 🚀 Features
+## Features
 
 ### Core Functionality
 - **Project Management** - Create and organize projects with team members
@@ -279,4 +276,4 @@ For issues and questions:
 ---
 
 Built with ❤️ for modern team collaboration
->>>>>>> Stashed changes
+
