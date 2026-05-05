@@ -19,3 +19,8 @@ export const updateTaskStatus = async (id, status) => {
   const { data } = await API.put(`/tasks/${id}/status`, { status });
   return data.task || data;
 };
+
+export const updateTask = async (id, taskData) => {
+  const { data } = await API.put(`/tasks/${id}`, taskData);
+  return data.task || data;
+};

@@ -78,6 +78,38 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
   res.json({ success: true, task });
 });
 
+// @desc    Update task (full details)
+// @route   PUT /api/tasks/:id
+const updateTask = asyncHandler(async (req, res) => {
+  const { title, description, dueDate, priority, assignedTo, status } = req.body;
+  const task = await Task.findById(req.params.id);
+
+  if (!task) {
+    res.status(404);
+    throw new Error("Task not found");
+  }
+
+  const project = await Project.findById(task.project).lean();
+  const isAdmin = project.admin.toString() === req.user._id.toString();
+
+  if (!isAdmin) {
+    res.status(403);
+    throw new Error("Only project admins can edit task details");
+  }
+
+  task.title = title || task.title;
+  task.description = description !== undefined ? description : task.description;
+  task.dueDate = dueDate || task.dueDate;
+  task.priority = priority || task.priority;
+  task.assignedTo = assignedTo || task.assignedTo;
+  task.status = status || task.status;
+
+  await task.save();
+  await task.populate("assignedTo", "name email");
+
+  res.json({ success: true, task });
+});
+
 // @desc    Get dashboard stats
 // @route   GET /api/tasks/dashboard
 const getDashboardStats = asyncHandler(async (req, res) => {
@@ -106,5 +138,6 @@ module.exports = {
   createTask,
   getTasksByProject,
   updateTaskStatus,
+  updateTask,
   getDashboardStats,
 };

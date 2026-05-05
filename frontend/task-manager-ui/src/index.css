@@ -138,3 +138,19 @@ body {
     @apply font-sans;
   }
 }
+
+/* Custom Thin Scrollbar Utility */
+.elegant-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.elegant-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.elegant-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 20px;
+}
+.elegant-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
