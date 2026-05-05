@@ -19,3 +19,8 @@ export const addMemberToProject = async (projectId, email) => {
   const { data } = await API.put(`/projects/${projectId}/members`, { email });
   return data;
 };
+
+export const removeMemberFromProject = async (projectId, memberId) => {
+  const { data } = await API.delete(`/projects/${projectId}/members/${memberId}`);
+  return data;
+};

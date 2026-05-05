@@ -5,6 +5,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
+import Profile from "./pages/Profile";
 import useAuthStore from "./store/authStore";
 
 import { Toaster } from "@/components/ui/sonner";
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute user={user}><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute user={user}><Projects /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute user={user}><ProjectDetail /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
       </Routes>
     </BrowserRouter>

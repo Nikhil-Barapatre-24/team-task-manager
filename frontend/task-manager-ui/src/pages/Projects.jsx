@@ -48,8 +48,16 @@ export default function Projects() {
     
     setCreating(true);
     try {
-      const newProject = await createProject(form);
-      setProjects([newProject, ...projects]);
+      const response = await createProject(form);
+      const newProject = response.project || response;
+      // Ensure the project has properly populated members with user data
+      const projectWithUserData = {
+        ...newProject,
+        members: newProject.members?.map(member => 
+          typeof member === 'object' ? member : { _id: member, name: user?.name || 'User', email: user?.email }
+        ) || [{ _id: user?._id, name: user?.name || 'User', email: user?.email }]
+      };
+      setProjects([projectWithUserData, ...projects]);
       setForm({ name: "", description: "" });
       setShowModal(false);
       toast.success("Project created successfully!");
@@ -77,53 +85,12 @@ export default function Projects() {
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Projects</h1>
           <p className="text-gray-500 text-sm mt-1">{projects.length} active project{projects.length !== 1 ? "s" : ""}</p>
         </div>
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogTrigger asChild>
-            <Button className="h-11 shadow-indigo-100 shadow-md">
-              <Plus size={16} className="mr-2" /> New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Folder size={20} className="text-indigo-600" /> New Project
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Project Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="E.g. Website Redesign"
-                  value={form.name}
-                  disabled={creating}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <textarea
-                  id="description"
-                  rows={3}
-                  placeholder="Brief description..."
-                  value={form.description}
-                  disabled={creating}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                />
-              </div>
-              <DialogFooter className="mt-2">
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)} disabled={creating}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : "Create Project"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setShowModal(true)}
+          className="h-11 shadow-indigo-100 shadow-md cursor-pointer"
+        >
+          <Plus size={16} className="mr-2" /> New Project
+        </Button>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -169,18 +136,61 @@ export default function Projects() {
           );
         })}
 
-        {/* Create New Card */}
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogTrigger asChild>
-            <Card className="border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-indigo-400 group transition-all cursor-pointer flex flex-col items-center justify-center min-h-[200px]">
-              <CardContent className="flex flex-col items-center gap-3 p-6 text-gray-400 group-hover:text-indigo-500 transition-colors">
-                <Plus size={32} className="group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-semibold tracking-tight">Create New Project</span>
-              </CardContent>
-            </Card>
-          </DialogTrigger>
-        </Dialog>
+        {/* Create New Card Trigger */}
+        <Card 
+          onClick={() => setShowModal(true)}
+          className="border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-indigo-400 group transition-all cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
+        >
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-gray-400 group-hover:text-indigo-500 transition-colors">
+            <Plus size={32} className="group-hover:scale-110 transition-transform" />
+            <span className="text-sm font-semibold tracking-tight">Create New Project</span>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Single Dialog for both triggers */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Folder size={20} className="text-indigo-600" /> New Project
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Project Name *</Label>
+              <Input
+                id="name"
+                placeholder="E.g. Website Redesign"
+                value={form.name}
+                disabled={creating}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                rows={3}
+                placeholder="Brief description..."
+                value={form.description}
+                disabled={creating}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+            <DialogFooter className="mt-2">
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)} disabled={creating}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : "Create Project"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
