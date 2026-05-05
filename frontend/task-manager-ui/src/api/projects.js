@@ -1,0 +1,26 @@
+import API from "./client";
+
+export const getProjects = async () => {
+  const { data } = await API.get("/projects");
+  return data.projects || data;
+};
+
+export const getProjectDetails = async (id) => {
+  const { data } = await API.get(`/projects/${id}`);
+  return data.project || data;
+};
+
+export const createProject = async (projectData) => {
+  const { data } = await API.post("/projects", projectData);
+  return data.project || data;
+};
+
+export const addMemberToProject = async (projectId, email) => {
+  const { data } = await API.put(`/projects/${projectId}/members`, { email });
+  return data;
+};
+
+export const removeMemberFromProject = async (projectId, memberId) => {
+  const { data } = await API.delete(`/projects/${projectId}/members/${memberId}`);
+  return data;
+};
