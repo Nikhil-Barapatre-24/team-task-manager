@@ -94,9 +94,44 @@ const addMemberToProject = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Member added successfully", project });
 });
 
+// @desc    Remove project member
+// @route   DELETE /api/projects/:id/members/:memberId
+const removeMemberFromProject = asyncHandler(async (req, res) => {
+  const { memberId } = req.params;
+
+  const project = await Project.findById(req.params.id);
+  if (!project) {
+    res.status(404);
+    throw new Error("Project not found");
+  }
+
+  if (project.admin.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Not authorized, admin only");
+  }
+
+  // Cannot remove the admin
+  if (project.admin.toString() === memberId) {
+    res.status(400);
+    throw new Error("Cannot remove project admin");
+  }
+
+  // Check if member exists
+  if (!project.members.includes(memberId)) {
+    res.status(404);
+    throw new Error("Member not found in project");
+  }
+
+  project.members = project.members.filter(member => member.toString() !== memberId);
+  await project.save();
+
+  res.json({ success: true, message: "Member removed successfully", project });
+});
+
 module.exports = {
   createProject,
   getProjects,
   getProjectById,
   addMemberToProject,
+  removeMemberFromProject,
 };
