@@ -2,7 +2,7 @@
 
 A modern, collaborative task management application built with React, Node.js, and MongoDB. Features real-time collaboration, multi-assignee tasks, and professional project management capabilities.
 
-## 🚀 Features
+## Features
 
 ### Core Functionality
 - **Project Management** - Create and organize projects with team members
@@ -78,7 +78,7 @@ team-task-manager/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18.0.0 or higher
+- Node.js 20.19.0 or higher
 - MongoDB (local or cloud instance)
 - Git
 
@@ -250,7 +250,7 @@ This project is licensed under the ISC License.
 - Check backend CORS configuration
 
 **Build Failures**
-- Ensure Node.js version >= 18.0.0
+- Ensure Node.js version >= 20.19.0
 - Clear node_modules and reinstall dependencies
 - Check for syntax errors in code
 
@@ -276,3 +276,4 @@ For issues and questions:
 ---
 
 Built with ❤️ for modern team collaboration
+
