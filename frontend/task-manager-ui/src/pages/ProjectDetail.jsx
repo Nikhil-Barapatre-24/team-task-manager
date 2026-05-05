@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mockProjects, mockTasks, mockUser } from "../mocks";
-import { ArrowLeft, Plus, UserPlus, X } from "lucide-react";
+import { getProjectDetails } from "../api/projects";
+import { getTasksByProject, createTask, updateTaskStatus } from "../api/tasks";
+import { ArrowLeft, Plus, UserPlus, X, Loader2, AlertTriangle, Calendar } from "lucide-react";
+import useAuthStore from "../store/authStore";
 
 const STATUS_COLS = ["To Do", "In Progress", "Done"];
 
@@ -19,39 +21,95 @@ const PRIORITY_STYLES = {
 
 export default function ProjectDetail() {
   const { id } = useParams();
-  const project = mockProjects.find((p) => p._id === id) || {
-    _id: id, name: "Project", description: "", admin: mockUser, members: [mockUser],
-  };
+  const user = useAuthStore((state) => state.user);
 
-  const [tasks, setTasks] = useState(mockTasks);
+  const [project, setProject] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "" });
+  const [creatingTask, setCreatingTask] = useState(false);
 
-  const isAdmin = project.admin._id === mockUser._id;
+  useEffect(() => {
+    fetchProjectData();
+  }, [id]);
 
-  const handleCreateTask = (e) => {
+  const fetchProjectData = async () => {
+    try {
+      setLoading(true);
+      const [projData, tasksData] = await Promise.all([
+        getProjectDetails(id),
+        getTasksByProject(id),
+      ]);
+      setProject(projData);
+      setTasks(tasksData);
+    } catch (err) {
+      setError("Failed to load project details.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!taskForm.title || !taskForm.dueDate) return;
-    const newTask = {
-      _id: `t${Date.now()}`,
-      title: taskForm.title,
-      description: taskForm.description,
-      status: "To Do",
-      priority: taskForm.priority,
-      dueDate: taskForm.dueDate,
-      project,
-      assignedTo: project.members.find((m) => m._id === taskForm.assignedTo) || project.members[0],
-    };
-    setTasks([...tasks, newTask]);
-    setTaskForm({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "" });
-    setShowTaskModal(false);
+    if (!taskForm.title || !taskForm.dueDate || !taskForm.assignedTo) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    setCreatingTask(true);
+    try {
+      const newTask = await createTask({
+        ...taskForm,
+        project: id
+      });
+      setTasks([...tasks, newTask]);
+      setTaskForm({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "" });
+      setShowTaskModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create task. " + (err.response?.data?.message || ""));
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
-  const moveTask = (taskId, newStatus) => {
+  const moveTask = async (taskId, newStatus) => {
+    // Optimistic update
+    const originalTasks = [...tasks];
     setTasks(tasks.map((t) => t._id === taskId ? { ...t, status: newStatus } : t));
+
+    try {
+      await updateTaskStatus(taskId, newStatus);
+    } catch (err) {
+      console.error(err);
+      setTasks(originalTasks); // Revert on failure
+      alert("Failed to update task status.");
+    }
   };
 
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <Loader2 className="animate-spin text-indigo-600" size={40} />
+      <p className="text-gray-500 font-medium">Loading project tasks...</p>
+    </div>
+  );
+
+  if (error || !project) return (
+    <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="bg-red-50 border border-red-200 text-red-600 p-6 rounded-2xl flex flex-col items-center gap-4">
+        <AlertTriangle size={32} />
+        <p className="font-semibold text-lg">{error || "Project not found"}</p>
+        <Link to="/projects" className="bg-red-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-red-700 transition">Back to Projects</Link>
+      </div>
+    </div>
+  );
+
+  const isAdmin = (project.admin?._id || project.admin) === user?._id;
   const inputCls = "px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition w-full font-[inherit]";
 
   return (
@@ -114,7 +172,7 @@ export default function ProjectDetail() {
 
               <div className="flex flex-col gap-3 min-h-16">
                 {colTasks.length === 0 && (
-                  <div className="text-center text-xs text-gray-300 py-8">No tasks</div>
+                  <div className="text-center text-xs text-gray-300 py-8 italic font-medium">No tasks yet</div>
                 )}
                 {colTasks.map((task) => (
                   <div key={task._id} className="bg-white rounded-xl p-3.5 shadow-sm border border-white/80 hover:shadow-md hover:-translate-y-0.5 transition-all">
@@ -160,8 +218,8 @@ export default function ProjectDetail() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowTaskModal(false)}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><Plus size={18}/> New Task</h2>
-              <button onClick={() => setShowTaskModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18}/></button>
+              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><Plus size={18} /> New Task</h2>
+              <button onClick={() => setShowTaskModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <form onSubmit={handleCreateTask} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
@@ -210,8 +268,8 @@ export default function ProjectDetail() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowMemberModal(false)}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><UserPlus size={18}/> Add Member</h2>
-              <button onClick={() => setShowMemberModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18}/></button>
+              <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2"><UserPlus size={18} /> Add Member</h2>
+              <button onClick={() => setShowMemberModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
